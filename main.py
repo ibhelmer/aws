@@ -1,6 +1,3 @@
-# Rui Santos & Sara Santos - Random Nerd Tutorials
-# Complete project details at https://RandomNerdTutorials.com/micropython-i2c-lcd-esp32-esp8266/
-
 from machine import Pin, SoftI2C
 from machine_i2c_lcd import I2cLcd
 from machine import SDCard
