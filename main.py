@@ -1,4 +1,4 @@
-from machine import Pin, SoftI2C
+from machine import Pin, I2C
 from machine_i2c_lcd import I2cLcd
 from machine import SDCard
 from machine import RTC
@@ -55,7 +55,7 @@ def connect2wifi():
             wlan.active(True)
             wlan.connect('ITLab', 'MaaGodt*7913')
             timeout = 10
-            start_tiem = time.time()
+            start_time = time.time()
             while not wlan.isconnected():
                 if time.time() - start_time > timeout:
                     pass
@@ -95,7 +95,7 @@ def measurement():
             file.write(str(temp2-temp1)+"\n")    
 ### MAIN starts here ###
 # Initialize I2C 
-i2c = i2c = SoftI2C(sda=Pin(21), scl=Pin(22), freq=400000)
+i2c = i2c = I2C(0, sda=Pin(21), scl=Pin(22), freq=400000)
 # Initialize LCD and the two Temp sensors
 lcd = I2cLcd(i2c, I2C_ADDR, I2C_NUM_ROWS, I2C_NUM_COLS)
 lcd.custom_char(1,wchar)
