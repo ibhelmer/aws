@@ -48,8 +48,8 @@ def updatescreen():
 def connect2wifi():
     global wifistat
     global netconfig
+    wlan = network.WLAN(network.STA_IF)
     while True:
-        wlan = network.WLAN(network.STA_IF)
         if not wlan.isconnected():
             wifistat = 1
             wlan.active(True)
@@ -58,10 +58,12 @@ def connect2wifi():
             start_time = time.time()
             while not wlan.isconnected():
                 if time.time() - start_time > timeout:
+                    wifistat = 0
                     pass
                 sleep(1)
-        wifistat = 3
-        netconfig = wlan.ipconfig('addr4')
+        else:
+            wifistat = 3
+            netconfig = wlan.ipconfig('addr4')
         sleep(30)
 def setup_tcn75(adr):
     i2c.writeto_mem(adr, 0x01, b'\x60')
