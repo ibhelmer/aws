@@ -7,6 +7,12 @@ from time import sleep
 import network
 import os
 import _thread
+from umqtt.simple import MQTTClient
+
+MQTT_BROKER = "mqtt.sof60.dk"
+CLIENT_ID   = "aws_ihn_001"
+TOPIC       = b"aws_ihn_001/tempdiff"
+
 # Define the LCD I2C address and dimensions
 I2C_ADDR = 0x27
 I2C_NUM_ROWS = 2
@@ -48,8 +54,8 @@ def updatescreen():
 def connect2wifi():
     global wifistat
     global netconfig
-    wlan = network.WLAN(network.STA_IF)
     while True:
+        wlan = network.WLAN(network.STA_IF)
         if not wlan.isconnected():
             wifistat = 1
             wlan.active(True)
@@ -58,12 +64,10 @@ def connect2wifi():
             start_time = time.time()
             while not wlan.isconnected():
                 if time.time() - start_time > timeout:
-                    wifistat = 0
                     pass
                 sleep(1)
-        else:
-            wifistat = 3
-            netconfig = wlan.ipconfig('addr4')
+        wifistat = 3
+        netconfig = wlan.ipconfig('addr4')
         sleep(30)
 def setup_tcn75(adr):
     i2c.writeto_mem(adr, 0x01, b'\x60')
@@ -93,8 +97,14 @@ def measurement():
             temp2 = read_temp(I2C_TMP2_ADDR)
             with open("/sd/tempdiff.csv", "a") as file:
                 file.write(str(temp2-temp1)+"\n")
+            msg = "{}".format(temp1-temp2)
+            client.publish(TOPIC, msg)
         finally:
             lock.release()
+def connect2mqtt():
+    client.connect()
+    print("Connected to MQTT broker:", MQTT_BROKER)
+    
 ### MAIN starts here ###
 # Initialize I2C 
 i2c = i2c = I2C(0, sda=Pin(21), scl=Pin(22), freq=400000)
@@ -102,10 +112,14 @@ i2c = i2c = I2C(0, sda=Pin(21), scl=Pin(22), freq=400000)
 # Instantiate classes 
 lcd = I2cLcd(i2c, I2C_ADDR, I2C_NUM_ROWS, I2C_NUM_COLS)
 rtc=RTC()
+client = MQTTClient(CLIENT_ID, MQTT_BROKER)
+
 # Call setup functions
 setup_tcn75(I2C_TMP1_ADDR)
 setup_tcn75(I2C_TMP2_ADDR)
 setup_sdcard()
+connect2mqtt()
+
 # Install user defined char in addr 1 and clear lcd
 lcd.custom_char(1,wchar)
 lcd.clear()
