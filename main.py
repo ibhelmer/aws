@@ -4,6 +4,7 @@ from machine_i2c_lcd import I2cLcd
 from machine import SDCard
 from machine import RTC
 from time import sleep
+import time
 import network
 import os
 import _thread
@@ -30,11 +31,13 @@ temp2 = 0
 wifistat = 0
 wifistattable = ("Not connected   ", "Connecting...   ","WiFi error      ", "Connected       ")
 netconfig = ("","")
+mqttconn = False
 def updatescreen():
     global wifistat
     global temp1
     global temp2
     global netconfig
+    global mqttconn
     while True:
         lcd.move_to(0,0)
         if wifistat < 3:
@@ -42,6 +45,12 @@ def updatescreen():
         if wifistat == 3:
             lcd.putstr(str(netconfig[0]))
             lcd.putstr("  "+chr(1))
+        if mqttconn == True:
+            lcd.move_to(14,0)
+            lcd.putstr("*")
+        else:
+            lcd.move_to(14,0)
+            lcd.putstr(" ")            
         lcd.move_to(0,1)
         lock.acquire()
         try:
@@ -54,10 +63,12 @@ def updatescreen():
 def connect2wifi():
     global wifistat
     global netconfig
+    global mqttconn
     while True:
         wlan = network.WLAN(network.STA_IF)
         if not wlan.isconnected():
             wifistat = 1
+            mqttconn = False
             wlan.active(True)
             wlan.connect('ITLab', 'MaaGodt*7913')
             timeout = 10
@@ -66,8 +77,11 @@ def connect2wifi():
                 if time.time() - start_time > timeout:
                     pass
                 sleep(1)
-        wifistat = 3
-        netconfig = wlan.ipconfig('addr4')
+        else:
+            wifistat = 3
+            netconfig = wlan.ipconfig('addr4')
+            if not mqttconn == True:
+                connect2mqtt()
         sleep(30)
 def setup_tcn75(adr):
     i2c.writeto_mem(adr, 0x01, b'\x60')
@@ -101,8 +115,10 @@ def measurement():
             client.publish(TOPIC, msg)
         finally:
             lock.release()
-def connect2mqtt():
+def connect2mqtt(): 
+    global mqttconn
     client.connect()
+    mqttconn = True
     print("Connected to MQTT broker:", MQTT_BROKER)
     
 ### MAIN starts here ###
@@ -118,7 +134,7 @@ client = MQTTClient(CLIENT_ID, MQTT_BROKER)
 setup_tcn75(I2C_TMP1_ADDR)
 setup_tcn75(I2C_TMP2_ADDR)
 setup_sdcard()
-connect2mqtt()
+
 
 # Install user defined char in addr 1 and clear lcd
 lcd.custom_char(1,wchar)
